@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'playground',
     'debug_toolbar',
+    'store',
+    'tags',
 ]
 
 INTERNAL_IPS = [
