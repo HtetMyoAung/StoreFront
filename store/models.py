@@ -8,6 +8,8 @@ class promotion(models.Model):
 
 class Collection(models.Model):
     title = models.CharField(max_length=255)
+    featured_product = models.ForeignKey(
+        'Product', on_delete=models.SET_NULL, null=True, related_name='+')
 
 
 class Product(models.Model):
@@ -51,7 +53,7 @@ class Order(models.Model):
     placed_at = models.DateTimeField(auto_now_add=True)
     payment_status = models.CharField(
         max_length=1, choices=PAYMENT_STATUS_CHOICES, default=PENDING)
-    Customer = models.ForeignKey(
+    customer = models.ForeignKey(
         Customer, on_delete=models.PROTECT)
 
 
