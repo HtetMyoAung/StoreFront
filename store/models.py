@@ -22,6 +22,12 @@ class Product(models.Model):
     collection = models.ForeignKey(Collection, on_delete=models.PROTECT)
     promotions = models.ManyToManyField(promotion)
 
+    class Meta:
+        db_table = 'store_product'
+        indexes = [
+            models.Index(fields=['title']),
+        ]
+
 
 class Customer(models.Model):
     MEMBERSHIP_BRONZE = 'B'
