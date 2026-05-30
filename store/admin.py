@@ -32,9 +32,16 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(models.Collection)
 class CollectionAdmin(admin.ModelAdmin):
-    list_display = ['title', 'featured_product']
+    list_display = ['title', 'Collection_count']
     ordering = ['title']
     list_per_page = 10
+
+    @admin.display(ordering='product_count')
+    def Collection_count(self, collection):
+        return collection.product_set.count()
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(product_count=models.Count('product'))
 
 
 @admin.register(models.Order)
