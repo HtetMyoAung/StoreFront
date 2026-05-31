@@ -24,6 +24,9 @@ class InventoryFilter(admin.SimpleListFilter):
 
 @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['collection']
+    # automatically populate the slug field based on the title field
+    prepopulated_fields = {'slug': ['title']}
     # add a custom action to clear inventory for selected products in the admin interface
     actions = ['clear_inventory']
     list_display = ['title', 'unit_price',
@@ -66,6 +69,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(models.Collection)
 class CollectionAdmin(admin.ModelAdmin):
+    search_fields = ['title__istartswith']
     list_display = ['title', 'Collection_count']
     list_per_page = 10
     ordering = ['title']
@@ -81,6 +85,8 @@ class CollectionAdmin(admin.ModelAdmin):
 
 @admin.register(models.Order)
 class OrderAdmin(admin.ModelAdmin):
+    # add a search bar to the order admin page that allows searching by the customer's first name, last name, and email
+    autocomplete_fields = ['customer']
     list_display = ['id', 'placed_at', 'payment_status', 'customer']
     # Query optimization
     list_select_related = ['customer']
