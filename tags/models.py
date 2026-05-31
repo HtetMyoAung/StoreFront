@@ -13,3 +13,6 @@ class TaggedItem(models.Model):
         ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey()
+
+    def __str__(self) -> str:
+        return self.tag.label
