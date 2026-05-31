@@ -83,10 +83,21 @@ class CollectionAdmin(admin.ModelAdmin):
         return format_html('<a href="{}">{}</a>', url, collection.product_set.count())
 
 
+class OrderItemInline(admin.TabularInline):
+    model = models.OrderItem
+    autocomplete_fields = ['product']
+    extra = 0
+    min_num = 1
+    max_num = 10
+
+
 @admin.register(models.Order)
 class OrderAdmin(admin.ModelAdmin):
+
     # add a search bar to the order admin page that allows searching by the customer's first name, last name, and email
     autocomplete_fields = ['customer']
+    # add an inline to the order admin page that allows editing the order items directly on the order page
+    inlines = [OrderItemInline]
     list_display = ['id', 'placed_at', 'payment_status', 'customer']
     # Query optimization
     list_select_related = ['customer']
