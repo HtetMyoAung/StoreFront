@@ -1,6 +1,4 @@
 from django.contrib import admin, messages
-from tags.models import TaggedItem
-from django.contrib.contenttypes.admin import GenericTabularInline
 from django.db.models import Count
 from django.db.models.query import QuerySet
 from django.urls import reverse
@@ -25,19 +23,13 @@ class InventoryFilter(admin.SimpleListFilter):
             return queryset.filter(inventory__gte=10)
 
 
-class TagInline(GenericTabularInline):
-    autocomplete_fields = ['tag']
-    model = TaggedItem
-    extra = 1
-
-
 @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
     search_fields = ['title']
     autocomplete_fields = ['collection']
     # automatically populate the slug field based on the title field
     prepopulated_fields = {'slug': ['title']}
-    inlines = [TagInline]
+
     # add a custom action to clear inventory for selected products in the admin interface
     actions = ['clear_inventory']
     list_display = ['title', 'unit_price',
