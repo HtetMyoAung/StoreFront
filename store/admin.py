@@ -104,6 +104,3 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ['id', 'placed_at', 'payment_status', 'customer']
     # Query optimization
     list_select_related = ['customer']
-
-
-admin.site.register(models.OrderItem)
