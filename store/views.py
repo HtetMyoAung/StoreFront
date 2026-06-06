@@ -17,16 +17,33 @@ def product_list(request):
     elif request.method == 'POST':
         # create a new product
         serializer = ProductSerializer(data=request.data)
+        # validate the data and raise an exception if it's invalid
         serializer.is_valid(raise_exception=True)
+        # save the new product to the database
+        serializer.save()
         print(serializer.validated_data)
-        return Response('ok')
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 # created a view function for product details, which takes an id parameter
 def product_detail(request, id):
     # get the product with the given id, and return a 404 error if it doesn't exist
     product = get_object_or_404(Product, pk=id)
-    # serialize the product and return it in the response
-    serializer = ProductSerializer(product)
-    return Response(serializer.data)
+    if request.method == 'GET':
+        # serialize the product and return it in the response
+        serializer = ProductSerializer(product)
+        return Response(serializer.data)
+    elif request.method == 'PUT':
+        # update the product with the data from the request
+        serializer = ProductSerializer(product, data=request.data)
+        # validate the data and raise an exception if it's invalid
+        serializer.is_valid(raise_exception=True)
+        # save the updated product to the database
+        serializer.save()
+        return Response(serializer.data)
+
+
+@api_view()
+def collection_detail(request, pk):
+    return HttpResponse('ok')
