@@ -9,13 +9,19 @@ from django.db.models import Count
 
 
 class ProductViewSet(ModelViewSet):
-    # viewset automatically provides `list`, `create`, `retrieve`, `update`, and `destroy` actions.
-    queryset = Product.objects.all()
+
     #  used for validating and deserializing input, and for serializing output.
     serializer_class = ProductSerializer
 
-    def get_serializer_context(self):
-        return {'request': self.request}
+    def get_queryset(self):
+        queryset = Product.objects.all()
+        # Get the 'collection_id' from the query parameters of the request.
+        collection_id = self.request.query_params.get('collection_id')
+        # If 'collection_id' is provided, filter the products by the specified collection_id.
+        if collection_id is not None:
+            queryset = queryset.filter(collection_id=collection_id)
+        # If 'collection_id' is not provided, return all products.
+        return queryset
 
     def destroy(self, request, *args, **kwargs):
         if OrderItem.objects.filter(product_id=kwargs['pk']).count() > 0:
@@ -40,7 +46,9 @@ class ReviewViewSet(ModelViewSet):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
+        # Filter reviews by the product_id passed in the URL (product_pk)
         return self.queryset.filter(product_id=self.kwargs['product_pk'])
 
     def get_serializer_context(self):
+        # Pass the product_id from the URL to the serializer context so that it can be used in the create method.
         return {'product_id': self.kwargs['product_pk']}

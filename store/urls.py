@@ -5,7 +5,7 @@ from rest_framework_nested import routers
 
 
 router = routers.DefaultRouter()
-router.register('products', views.ProductViewSet)
+router.register('products', views.ProductViewSet, basename='products')
 router.register('collections', views.CollectionViewSet)
 
 # Nested router for reviews under products
