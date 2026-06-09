@@ -2,26 +2,22 @@ from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.viewsets import ModelViewSet
+from store.filters import ProductFilter
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer
 from .models import Collection, OrderItem, Product, Review
 from django.db.models import Count
 
 
 class ProductViewSet(ModelViewSet):
-
+    #  used to define the queryset of products that will be used for retrieving and manipulating product data.
+    queryset = Product.objects.all()
     #  used for validating and deserializing input, and for serializing output.
     serializer_class = ProductSerializer
-
-    def get_queryset(self):
-        queryset = Product.objects.all()
-        # Get the 'collection_id' from the query parameters of the request.
-        collection_id = self.request.query_params.get('collection_id')
-        # If 'collection_id' is provided, filter the products by the specified collection_id.
-        if collection_id is not None:
-            queryset = queryset.filter(collection_id=collection_id)
-        # If 'collection_id' is not provided, return all products.
-        return queryset
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['collection_id']
+    filterset_class = ProductFilter
 
     def destroy(self, request, *args, **kwargs):
         if OrderItem.objects.filter(product_id=kwargs['pk']).count() > 0:
