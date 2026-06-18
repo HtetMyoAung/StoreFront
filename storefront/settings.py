@@ -152,3 +152,11 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'core.User'
+
+
+DJOSER = {
+    # 🌟 Give Command to Djoser to use JWT
+    'SERIALIZERS': {
+        'user_create': 'core.serializers.UserCreateSerializer',  # Custom User
+    }
+}
