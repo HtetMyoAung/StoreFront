@@ -148,10 +148,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-SIMPLE_JWT = {
-    'AUTH_HEADER_TYPES': ('JWT',),
-}
-
 AUTH_USER_MODEL = 'core.User'
 
 
@@ -159,9 +155,12 @@ DJOSER = {
     # 🌟 Give Command to Djoser to use JWT
     'SERIALIZERS': {
         'user_create': 'core.serializers.UserCreateSerializer',  # Custom User
+        'current_user': 'core.serializers.CurrentUserSerializer',
     }
+
 }
 
 SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('JWT',),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
 }
