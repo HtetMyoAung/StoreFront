@@ -13,6 +13,7 @@ from .pagination import DefaultPagination
 from .filters import ProductFilter
 from .models import Collection, OrderItem, Product, Review, Cart, CartItem, Customer
 from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer
+from .permissions import IsAdminOrReadOnly
 
 
 class ProductViewSet(ModelViewSet):
@@ -23,6 +24,7 @@ class ProductViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['collection_id']
     filterset_class = ProductFilter
+    permission_classes = [IsAdminOrReadOnly]
     pagination_class = DefaultPagination
     search_fields = ['title', 'description']
     ordering_fields = ['unit_price', 'last_updated']
@@ -39,6 +41,7 @@ class CollectionViewSet(ModelViewSet):
     queryset = Collection.objects.annotate(
         products_count=Count('products')).all()
     serializer_class = CollectionSerializer
+    permission_classes = [IsAdminOrReadOnly]
 
     def destroy(self, request, *args, **kwargs):
         collection = get_object_or_404(Collection.objects.annotate(
@@ -87,7 +90,7 @@ class CartItemViewSet(ModelViewSet):
         return CartItem.objects.filter(cart_id=self.kwargs['cart_pk']).select_related('product')
 
 
-class CustomerViewSet(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, GenericViewSet):
+class CustomerViewSet(ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated]
@@ -97,7 +100,7 @@ class CustomerViewSet(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, Ge
         if self.request.method == 'GET':
             return [AllowAny()]
 
-    @action(detail=False, methods=['GET', 'PUT'])
+    @action(detail=False, methods=['GET', 'PUT'], permission_classes=[IsAdminOrReadOnly])
     def me(self, request):
 
         (customer, created) = Customer.objects.get(user_id=request.user.id)
