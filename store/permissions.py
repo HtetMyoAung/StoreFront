@@ -16,3 +16,15 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         # 🌟 ၂။ အကယ်၍ SAFE_METHODS မဟုတ်ဘဲ POST, PUT, DELETE ဖြစ်လာပါက
         # Request ပို့သူသည် အကောင့်ဝင်ထားသူ ဖြစ်ရမည့်အပြင် Staff/Admin (`is_staff=True`) ဖြစ်မှသာ True ပေးမည်
         return bool(request.user and request.user.is_staff)
+
+
+class FullDjangoModelPermissions(permissions.DjangoModelPermissions):
+    """
+    GET Request ကိုပါ Django ၏ view_model permission ရှိမရှိ တိကျစွာ လိုက်လံစစ်ဆေးပေးမည့် အဆင့်မြင့်တံတိုင်း
+    """
+
+    def __init__(self):
+        # 🌟 မူလ DjangoModelPermissions ၏ စည်းမျဉ်းမြေပုံ (perms_map) ထဲသို့
+        # GET နှင့် HEAD အတွက် 'view_%s' permission လိုက်စစ်ပါဟု ဒိုင်နမစ် သွားရောက်ဖြည့်စွက်လိုက်ခြင်း ဖြစ်သည်။
+        self.perms_map['GET'] = ['%(app_label)s.view_%(model_name)s']
+        self.perms_map['HEAD'] = ['%(app_label)s.view_%(model_name)s']

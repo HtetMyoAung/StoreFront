@@ -9,6 +9,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework.permissions import DjangoModelPermissions
 from .pagination import DefaultPagination
 from .filters import ProductFilter
 from .models import Collection, OrderItem, Product, Review, Cart, CartItem, Customer
@@ -24,7 +25,7 @@ class ProductViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['collection_id']
     filterset_class = ProductFilter
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [DjangoModelPermissions]
     pagination_class = DefaultPagination
     search_fields = ['title', 'description']
     ordering_fields = ['unit_price', 'last_updated']
@@ -93,17 +94,19 @@ class CartItemViewSet(ModelViewSet):
 class CustomerViewSet(ModelViewSet):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def get_permissions(self):
 
         if self.request.method == 'GET':
             return [AllowAny()]
+        return [permission() for permission in self.permission_classes]
 
-    @action(detail=False, methods=['GET', 'PUT'], permission_classes=[IsAdminOrReadOnly])
+    @action(detail=False, methods=['GET', 'PUT'], permission_classes=[IsAuthenticated])
     def me(self, request):
 
-        (customer, created) = Customer.objects.get(user_id=request.user.id)
+        customer, created = Customer.objects.get_or_create(
+            user_id=request.user.id)
 
         if request.method == 'GET':
             serializer = CustomerSerializer(customer)
