@@ -1,41 +1,39 @@
+from store.permissions import IsAdminOrReadOnly, ViewCustomerHistoryPermission
+from store.pagination import DefaultPagination
+from django.db.models.aggregates import Count
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Count
+from rest_framework.decorators import action, permission_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, RetrieveModelMixin
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, UpdateModelMixin
-from rest_framework import status
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from rest_framework.permissions import DjangoModelPermissions
-from .pagination import DefaultPagination
+from rest_framework import status
 from .filters import ProductFilter
-from .models import Collection, OrderItem, Product, Review, Cart, CartItem, Customer
-from .serializers import CollectionSerializer, ProductSerializer, ReviewSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, CustomerSerializer
-from .permissions import IsAdminOrReadOnly
+from .models import Cart, CartItem, Collection, Customer, Product, Review
+from .serializers import AddCartItemSerializer, CartItemSerializer, CartSerializer, CollectionSerializer, CustomerSerializer, ProductSerializer, ReviewSerializer, UpdateCartItemSerializer
 
 
 class ProductViewSet(ModelViewSet):
-    #  used to define the queryset of products that will be used for retrieving and manipulating product data.
     queryset = Product.objects.all()
-    #  used for validating and deserializing input, and for serializing output.
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['collection_id']
     filterset_class = ProductFilter
-    permission_classes = [DjangoModelPermissions]
     pagination_class = DefaultPagination
+    permission_classes = [IsAdminOrReadOnly]
     search_fields = ['title', 'description']
-    ordering_fields = ['unit_price', 'last_updated']
+    ordering_fields = ['unit_price', 'last_update']
 
-    def destroy(self, request, *args, **kwargs):
-        if OrderItem.objects.filter(product_id=kwargs['pk']).count() > 0:
-            return Response({"error": "Cannot delete product with existing orders"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().destroy(request, *args, **kwargs)
+    def get_serializer_context(self):
+        return {'request': self.request}
 
-    permission_classes = [AllowAny]
+    def delete(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        if product.orderitems.count() > 0:
+            return Response({'error': 'Product cannot be deleted because it is associated with an order item.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CollectionViewSet(ModelViewSet):
@@ -44,33 +42,29 @@ class CollectionViewSet(ModelViewSet):
     serializer_class = CollectionSerializer
     permission_classes = [IsAdminOrReadOnly]
 
-    def destroy(self, request, *args, **kwargs):
-        collection = get_object_or_404(Collection.objects.annotate(
-            products_count=Count('products')), pk=kwargs['pk'])
+    def delete(self, request, pk):
+        collection = get_object_or_404(Collection, pk=pk)
         if collection.products.count() > 0:
-            return Response({"error": "Cannot delete collection with existing products"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return super().destroy(request, *args, **kwargs)
+            return Response({'error': 'Collection cannot be deleted because it includes one or more products.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        collection.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ReviewViewSet(ModelViewSet):
     serializer_class = ReviewSerializer
-    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         return Review.objects.filter(product_id=self.kwargs['product_pk'])
 
     def get_serializer_context(self):
-        # Pass the product_id from the URL to the serializer context so that it can be used in the create method.
         return {'product_id': self.kwargs['product_pk']}
 
 
 class CartViewSet(CreateModelMixin,
-                  GenericViewSet,
+                  RetrieveModelMixin,
                   DestroyModelMixin,
-                  RetrieveModelMixin,):
-    #  used to define the queryset of carts that will be used for retrieving and manipulating cart data.
+                  GenericViewSet):
     queryset = Cart.objects.prefetch_related('items__product').all()
-    #  used for validating and deserializing input, and for serializing output.
     serializer_class = CartSerializer
 
 
@@ -88,7 +82,9 @@ class CartItemViewSet(ModelViewSet):
         return {'cart_id': self.kwargs['cart_pk']}
 
     def get_queryset(self):
-        return CartItem.objects.filter(cart_id=self.kwargs['cart_pk']).select_related('product')
+        return CartItem.objects \
+            .filter(cart_id=self.kwargs['cart_pk']) \
+            .select_related('product')
 
 
 class CustomerViewSet(ModelViewSet):
@@ -96,22 +92,17 @@ class CustomerViewSet(ModelViewSet):
     serializer_class = CustomerSerializer
     permission_classes = [IsAdminUser]
 
-    def get_permissions(self):
-
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        return [permission() for permission in self.permission_classes]
+    @action(detail=True, permission_classes=[ViewCustomerHistoryPermission])
+    def history(self, request, pk):
+        return Response('ok')
 
     @action(detail=False, methods=['GET', 'PUT'], permission_classes=[IsAuthenticated])
     def me(self, request):
-
-        customer, created = Customer.objects.get_or_create(
+        (customer, created) = Customer.objects.get_or_create(
             user_id=request.user.id)
-
         if request.method == 'GET':
             serializer = CustomerSerializer(customer)
             return Response(serializer.data)
-
         elif request.method == 'PUT':
             serializer = CustomerSerializer(customer, data=request.data)
             serializer.is_valid(raise_exception=True)

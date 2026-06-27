@@ -1,6 +1,6 @@
-from rest_framework import serializers
 from decimal import Decimal
-from .models import Cart, CartItem, Product, Collection, Review, Customer
+from store.models import Cart, CartItem, Customer, Product, Collection, Review
+from rest_framework import serializers
 
 
 class CollectionSerializer(serializers.ModelSerializer):
@@ -14,25 +14,23 @@ class CollectionSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'title', 'slug', 'description', 'inventory',
+        fields = ['id', 'title', 'description', 'slug', 'inventory',
                   'unit_price', 'price_with_tax', 'collection']
 
     price_with_tax = serializers.SerializerMethodField(
-        method_name='get_price_with_tax')
+        method_name='calculate_tax')
 
-    def get_price_with_tax(self, product):
-        return product.unit_price * Decimal('1.1')
+    def calculate_tax(self, product: Product):
+        return product.unit_price * Decimal(1.1)
 
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = ['id', 'name', 'description', 'date']
+        fields = ['id', 'date', 'name', 'description']
 
     def create(self, validated_data):
-        # The product_id is passed in the context when the serializer is initialized in the viewset.
         product_id = self.context['product_id']
-        # Create a new review instance with the product_id and the validated data.
         return Review.objects.create(product_id=product_id, **validated_data)
 
 
@@ -46,7 +44,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     product = SimpleProductSerializer()
     total_price = serializers.SerializerMethodField()
 
-    def get_total_price(self, cart_item):
+    def get_total_price(self, cart_item: CartItem):
         return cart_item.quantity * cart_item.product.unit_price
 
     class Meta:
@@ -73,12 +71,8 @@ class AddCartItemSerializer(serializers.ModelSerializer):
     def validate_product_id(self, value):
         if not Product.objects.filter(pk=value).exists():
             raise serializers.ValidationError(
-                'Given the Product id is not found')
+                'No product with the given ID was found.')
         return value
-
-    class Meta:
-        model = CartItem
-        fields = ['id', 'product_id', 'quantity']
 
     def save(self, **kwargs):
         cart_id = self.context['cart_id']
@@ -90,11 +84,16 @@ class AddCartItemSerializer(serializers.ModelSerializer):
                 cart_id=cart_id, product_id=product_id)
             cart_item.quantity += quantity
             cart_item.save()
-            self.instance = cart_item  # DRF က ဘာဒေတာ ပြန်ပြရမလဲ သိစေရန် instance သတ်မှတ်ပေးရသည်
+            self.instance = cart_item
         except CartItem.DoesNotExist:
             self.instance = CartItem.objects.create(
                 cart_id=cart_id, **self.validated_data)
+
         return self.instance
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'product_id', 'quantity']
 
 
 class UpdateCartItemSerializer(serializers.ModelSerializer):
